@@ -31,7 +31,6 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
     uint256 public immutable EPOCH_LENGTH;
     uint256 public immutable WITHDRAW_TIME;
 
-    address public bank;
     address public treasury;
     address public devWallet;
 
@@ -50,7 +49,6 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
 
     event LogSetDevWallet(address indexed devWallet);
     event LogSetTreasury(address indexed treasury);
-    event LogSetBank(address indexed bank);
     event LogSetStakedToken(address indexed stakedToken);
     event LogSetAPY(uint256 indexed apy);
     event LogDeposit(
@@ -74,15 +72,11 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
         address indexed referral,
         uint256 indexed referralReward
     );
-    event LogInjectFunds(
-        uint256 indexed injectAmount,
-        uint256 indexed rewardAmount
-    );
+    event LogInjectFunds(uint256 indexed injectAmount);
     event LogEjectFunds(uint256 indexed ejectAmount);
 
     constructor(
         IERC20 _stakedToken,
-        address _bank,
         uint256 _apy,
         address _treasury,
         address _devWallet,
@@ -91,7 +85,6 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
         uint256 _withdrawTime
     ) {
         setStakedToken(_stakedToken);
-        setBank(_bank);
         _setAPY(_apy);
         setTreasury(_treasury);
         setDevWallet(_devWallet);
@@ -115,15 +108,6 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
 
         treasury = _treasury;
         emit LogSetTreasury(treasury);
-    }
-
-    function setBank(address _bank) public onlyOwner {
-        require(_bank != address(0), "setBank: ZERO_ADDRESS");
-        require(_bank != bank, "setBank: SAME_ADDRESS");
-
-        bank = _bank;
-
-        emit LogSetBank(bank);
     }
 
     function setPause() external onlyOwner {
@@ -406,22 +390,15 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @notice Inject funds and rewards to distribute to stakers.
+     * @notice Inject funds to distribute to stakers.
      */
-    function injectFunds(uint256 _injectAmount, uint256 _rewardAmount)
-        external
-        onlyOwner
-    {
+    function injectFunds(uint256 _injectAmount) external onlyOwner {
         require(
-            stakedToken.transferFrom(bank, address(this), _injectAmount),
+            stakedToken.transferFrom(treasury, address(this), _injectAmount),
             "injectFunds: TRANSFERFROM_INJECT_FAIL"
         );
-        require(
-            stakedToken.transferFrom(bank, treasury, _rewardAmount),
-            "injectFunds: TRANSFERFROM_REWARD_FAIL"
-        );
 
-        emit LogInjectFunds(_injectAmount, _rewardAmount);
+        emit LogInjectFunds(_injectAmount);
     }
 
     /**
@@ -436,7 +413,7 @@ contract TTNBANK is Ownable, Pausable, ReentrancyGuard {
         );
 
         require(
-            stakedToken.transfer(bank, _amount),
+            stakedToken.transfer(treasury, _amount),
             "ejectFunds: TRANSFER_FAIL"
         );
 
